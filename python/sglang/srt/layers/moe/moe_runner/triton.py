@@ -142,8 +142,34 @@ def fused_experts_none_to_triton(
     quant_info: TritonMoeQuantInfo,
     runner_config: MoeRunnerConfig,
 ) -> StandardCombineInput:
+    from sglang.srt.layers.moe.moe_runner.kf_validation import maybe_run_qwen35_v2a
     from sglang.srt.layers.moe.moe_runner.triton_utils.fused_moe import fused_experts
     from sglang.srt.layers.moe.token_dispatcher.standard import StandardCombineInput
+
+    candidate_output = maybe_run_qwen35_v2a(
+        dispatch_output.hidden_states,
+        quant_info.w13_weight,
+        quant_info.w2_weight,
+        dispatch_output.topk_output.topk_weights,
+        dispatch_output.topk_output.topk_ids,
+        runner_config,
+        b1=quant_info.b13,
+        b2=quant_info.b2,
+        use_fp8_w8a8=quant_info.use_fp8_w8a8,
+        use_int8_w8a8=quant_info.use_int8_w8a8,
+        use_int8_w8a16=quant_info.use_int8_w8a16,
+        use_int4_w4a16=quant_info.use_int4_w4a16,
+        per_channel_quant=quant_info.per_channel_quant,
+        w1_scale=quant_info.w13_scale,
+        w2_scale=quant_info.w2_scale,
+        w1_zp=quant_info.w13_zp,
+        w2_zp=quant_info.w2_zp,
+        a1_scale=quant_info.a13_scale,
+        a2_scale=quant_info.a2_scale,
+        block_shape=quant_info.block_shape,
+    )
+    if candidate_output is not None:
+        return StandardCombineInput(hidden_states=candidate_output)
 
     output = fused_experts(
         hidden_states=dispatch_output.hidden_states,
