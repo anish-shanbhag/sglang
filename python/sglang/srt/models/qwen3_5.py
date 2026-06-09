@@ -1088,6 +1088,17 @@ class Qwen3_5ForCausalLM(nn.Module):
         # Initialize hidden states
         if self.pp_group.is_first_rank:
             if input_embeds is None:
+                # Clamp out-of-vocab input ids before the embedding gather. The
+                # server warmup has been observed to emit an out-of-vocab token id
+                # (e.g. far above vocab_size), whose embedding gather faults the CUDA
+                # context and stalls the subsequent fused-MoE TMA launch. The clamp is
+                # a no-op for valid tokens and is CUDA-graph-capture-safe (no host sync).
+                _vocab = (
+                    self.embed_tokens.num_embeddings
+                    if hasattr(self.embed_tokens, "num_embeddings")
+                    else self.config.vocab_size
+                )
+                input_ids = input_ids.clamp(0, _vocab - 1)
                 hidden_states = self.embed_tokens(input_ids)
             else:
                 hidden_states = input_embeds
