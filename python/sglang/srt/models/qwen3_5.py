@@ -636,6 +636,7 @@ class Qwen3_5LinearDecoderLayer(nn.Module):
                 forward_batch
             )
         )
+        if not torch.cuda.is_current_stream_capturing(): torch.cuda.synchronize()  # LOI-SYNC2 eager-only
         if isinstance(self.mlp, Qwen2MoeSparseMoeBlock):
             hidden_states = self.mlp(
                 hidden_states,
@@ -905,6 +906,7 @@ class Qwen3_5AttentionDecoderLayer(nn.Module):
                 forward_batch
             )
         )
+        if not torch.cuda.is_current_stream_capturing(): torch.cuda.synchronize()  # LOI-SYNC2 eager-only
         if isinstance(self.mlp, Qwen2MoeSparseMoeBlock):
             hidden_states = self.mlp(
                 hidden_states,
